@@ -1,11 +1,14 @@
 package bigreport;
 
+import bigreport.exception.CompositeIOException;
+import bigreport.exception.FileDeleteException;
 import bigreport.velocity.VelocityResolver;
 import bigreport.velocity.VelocityResult;
 import bigreport.xls.WorkBookParser;
 import bigreport.xls.merge.MergeInfo;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.poi.openxml4j.opc.OPCPackage;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.velocity.runtime.directive.Directive;
 
@@ -50,46 +53,55 @@ public class ReportMaker {
     public void createReport(InputStream templateInputStream, OutputStream resultOutputStream) throws IOException {
         File templateCopy = File.createTempFile("rm-report-" + new Date().getTime(), null);
         OutputStream templateCopyOutputStream = null;
+        CompositeIOException compositeIOException=null;
         try {
             templateCopyOutputStream = new FileOutputStream(templateCopy);
             IOUtils.copy(templateInputStream, templateCopyOutputStream);
             doCreateReport(resultOutputStream, templateCopy);
-        } finally {
-            try {
-                if (templateCopyOutputStream != null) {
-                    templateCopyOutputStream.close();
-                }
-            } finally {
-                if (templateCopy != null) {
-                    FileUtils.forceDelete(templateCopy);
-                }
-            }
+        } catch (Exception e){
+            compositeIOException=new CompositeIOException(e);
+            throw compositeIOException;
+        }  finally {
+            IOUtils.closeQuietly(templateCopyOutputStream);
+            deleteTemplateCopy(templateCopy, compositeIOException);
         }
     }
 
+    private void deleteTemplateCopy(File templateCopy, CompositeIOException compositeException) throws IOException {
+        if (templateCopy != null && templateCopy.exists()) {
+            try {
+                FileUtils.forceDelete(templateCopy);
+            } catch (IOException e){
+                FileDeleteException exception=new FileDeleteException(e, templateCopy);
+                if (compositeException==null){
+                    throw exception;
+                }
+                compositeException.addSuppressedException(exception);
+                throw compositeException;
+            }
+        }
+    }
 
     public void createReport(String templatePath, String destFilePath) throws IOException {
         File destFile = new File(destFilePath);
         FileOutputStream destOutputStream = null;
         File templateCopy = null;
+        CompositeIOException compositeIOException=null;
         try {
             destOutputStream = new FileOutputStream(destFile);
             File templateFile = new File(templatePath);
             templateCopy = File.createTempFile(destFile.getName(), null);
             FileUtils.copyFile(templateFile, templateCopy);
             doCreateReport(destOutputStream, templateCopy);
+        } catch (Exception e){
+            compositeIOException=new CompositeIOException(e);
+            throw compositeIOException;
         } finally {
-            try {
-                if (destOutputStream != null) {
-                    destOutputStream.close();
-                }
-            } finally {
-                if (templateCopy != null && templateCopy.exists()) {
-                    FileUtils.forceDelete(templateCopy);
-                }
-            }
+            IOUtils.closeQuietly(destOutputStream);
+            deleteTemplateCopy(templateCopy, compositeIOException);
         }
     }
+
 
     public ReportMaker addDirective(Class<? extends Directive> directiveClass) {
         resolver.addDirective(directiveClass);
@@ -108,15 +120,29 @@ public class ReportMaker {
             }
             writeWorkBook(zipDestFileOutputStream, zippedTemplateCopy, sheetTemplates);
         } finally {
-            try {
-                if (zippedTemplateCopy != null) {
-                    zippedTemplateCopy.close();
-                }
-            } finally {
-                if (zipDestFileOutputStream != null) {
-                    zipDestFileOutputStream.finish();
-                }
+            closeZipTemplateCopy(zippedTemplateCopy);
+            finishZipOutputStream(zipDestFileOutputStream);
+        }
+
+    }
+
+    private void finishZipOutputStream(ZipOutputStream zipDestFileOutputStream) {
+        try {
+            if (zipDestFileOutputStream != null) {
+                zipDestFileOutputStream.finish();
             }
+        } catch (Exception e) {
+            //ignore
+        }
+    }
+
+    private void closeZipTemplateCopy(ZipFile zippedTemplateCopy) {
+        try {
+            if (zippedTemplateCopy != null) {
+                zippedTemplateCopy.close();
+            }
+        } catch (Exception e) {
+            //ingnore
         }
     }
 
@@ -178,15 +204,29 @@ public class ReportMaker {
     }
 
     private Map<String, TemplateDescription> getTemplatePerSheet(File templateCopy) throws IOException {
-        XSSFWorkbook wb = new XSSFWorkbook(templateCopy.getCanonicalPath());
-
-        WorkBookParser parser = new WorkBookParser(wb);
-
-
-        Map<String, TemplateDescription> result = parser.parseWorkBook();
-        wb.getPackage().close();
-        return result;
+        XSSFWorkbook wb = null;
+        FileInputStream templateCopyInputStream = null;
+        try {
+            templateCopyInputStream = new FileInputStream(templateCopy.getCanonicalPath());
+            wb = new XSSFWorkbook(templateCopyInputStream);
+            WorkBookParser parser = new WorkBookParser(wb);
+            return parser.parseWorkBook();
+        } finally {
+            if (wb != null) {
+                closePackage(wb.getPackage());
+            }
+            IOUtils.closeQuietly(templateCopyInputStream);
+        }
     }
+
+    private void closePackage(OPCPackage aPackage) {
+        try {
+            aPackage.close();
+        } catch (IOException e) {
+            //do nothing
+        }
+    }
+
 
     private void writeRestData(VelocityResult velocityResult, String xlsxTemplateString, OutputStream output) throws IOException {
         int startIndex;
@@ -228,7 +268,7 @@ public class ReportMaker {
             int endOfDataIndex = xlsxTemplateString.indexOf(Markers.END_DATA);
             int startMergedCellsGroup = xlsxTemplateString.indexOf(Markers.START_MERGED_CELLS);
             String beforeMergedCells = "";
-            if (startMergedCellsGroup>=0){
+            if (startMergedCellsGroup >= 0) {
                 beforeMergedCells = xlsxTemplateString.substring(endOfDataIndex, startMergedCellsGroup);
             }
             IOUtils.write(beforeMergedCells, output, DEFAULT_CHAR_SET);

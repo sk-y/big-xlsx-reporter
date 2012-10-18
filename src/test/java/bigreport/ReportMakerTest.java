@@ -2,6 +2,7 @@ package bigreport;
 
 import bigreport.model.CalcItem;
 import bigreport.util.ValueResolver;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -11,61 +12,126 @@ import java.io.IOException;
 import java.util.*;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Unit test for simple ReportMaker.
  */
 public class ReportMakerTest {
+    private final static String OUTPUT_DIRECTORY_NAME ="out";
+    private Random random;
+    private static File outputDir;
 
-    @Test
-    public void testReportCreation() {
-        String templatePath = Thread.currentThread().getContextClassLoader().getResource("example.xlsx").getFile();
-        try {
-            Random random = new Random();
-            Map<String, Object> bean = createDataBean(random);
-            File outDir= new File("out");
-            outDir.mkdir();
-            Date startDate = new Date();
-            System.out.println("start at " + startDate);
-            new ReportMaker(bean).createReport(templatePath, "out/template"+System.currentTimeMillis()+".xlsx");
-            Date finishedDate = new Date();
-            System.out.println("finished at " + new Date().getTime());
-            System.out.println("Lasts " + (finishedDate.getTime() - startDate.getTime()) + "mils");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    @Before
+    public void init() throws IOException {
+        random = new Random(System.currentTimeMillis());
+        outputDir=createOutDir();
     }
 
     @Test
-    public void testReportCreationWithStreams() {
-        String templatePath = Thread.currentThread().getContextClassLoader().getResource("example.xlsx").getFile();
+    public void testReportCreationWithCorrectTemplateFile() throws IOException {
+        testReportCreation("example.xlsx");
+    }
+
+    @Test
+    public void testReportCreationWithIncorrectFileFormat() throws IOException {
+        testeReportCreateWithIncorrectFile("wrong.txt");
+    }
+
+    @Test
+    public void testReportCreationWithIncorrectArchiveFormat() throws IOException {
+        testeReportCreateWithIncorrectFile("wrong.zip");
+    }
+
+    private void testeReportCreateWithIncorrectFile(String fileName) throws IOException {
+        new IncorrectTemplateTester() {
+            void testReportCreationForFile(String fileName) throws IOException {
+                testReportCreation(fileName);
+            }
+        }.doTest(fileName);
+    }
+
+    private void testReportCreation(String fileName) throws IOException {
+        String templatePath = Thread.currentThread().getContextClassLoader().getResource(fileName).getFile();
+        Map<String, Object> bean = createDataBean(random);
+        Date startDate = fixStartTime();
+        new ReportMaker(bean).createReport(templatePath, createReportFilePathAndName(outputDir));
+        fixFinishedTime(startDate);
+    }
+
+    private Date fixStartTime() {
+        Date startDate = new Date();
+        System.out.println("start at " + startDate);
+        return startDate;
+    }
+
+    private void fixFinishedTime(Date startDate) {
+        Date finishedDate = new Date();
+        System.out.println("finished at " + finishedDate.getTime());
+        System.out.println("Lasts " + (finishedDate.getTime() - startDate.getTime()) + "mils");
+    }
+
+    private String createReportFilePathAndName(File outDir) {
+        return new File(outDir, "template" + System.currentTimeMillis() + ".xlsx").getAbsolutePath();
+    }
+
+    private File createOutDir() throws IOException {
+        File outDir = new File(OUTPUT_DIRECTORY_NAME);
+        if (outDir.exists()){
+            System.out.println("Output directory exists:"+outDir.getAbsolutePath());
+            return outDir;
+        }
+        if (!outDir.mkdir()){
+            throw new IOException("Error while creating output directory");
+        }
+        System.out.println("Output directory created:"+outDir.getAbsolutePath());
+        return outDir;
+    }
+
+    @Test
+    public void testReportCreationWithStreamsWithCorrectTemplate() throws IOException {
+        testReportCreationWithStreams("example.xlsx");
+    }
+
+    @Test
+    public void testReportCreationWithStreamsAndIncorrectFileFormat() throws IOException {
+        testeReportCreateWithStreamsWithIncorrectFile("wrong.txt");
+    }
+
+    @Test
+    public void testReportCreationWithSteamsAndIncorrectArchiveFormat() throws IOException {
+        testeReportCreateWithStreamsWithIncorrectFile("wrong.zip");
+    }
+
+    private void testeReportCreateWithStreamsWithIncorrectFile(String fileName) throws IOException {
+        new IncorrectTemplateTester() {
+            void testReportCreationForFile(String fileName) throws IOException {
+                testReportCreationWithStreams(fileName);
+            }
+        }.doTest(fileName);
+    }
+
+    private void testReportCreationWithStreams(String resourceName) throws IOException {
+        String templatePath = Thread.currentThread().getContextClassLoader().getResource(resourceName).getFile();
         FileOutputStream fos = null;
         try {
-            Random random = new Random();
             Map<String, Object> bean = createDataBean(random);
-            Date startDate = new Date();
-            System.out.println("start at " + startDate);
+            Date startDate = fixStartTime();
             FileInputStream fis = new FileInputStream(templatePath);
-            File outDir= new File("out");
-            outDir.mkdir();
-            System.out.println(outDir.getAbsolutePath());
-            File file = new File("out/template"+System.currentTimeMillis()+".xlsx");
-            fos = new FileOutputStream(file);
+            File reportFile = new File(createReportFilePathAndName(outputDir));
+            fos = new FileOutputStream(reportFile);
             new ReportMaker(bean).createReport(fis, fos);
-            Date finishedDate = new Date();
-            System.out.println("finished at " + new Date().getTime());
-            System.out.println("Lasts " + (finishedDate.getTime() - startDate.getTime()) + "mils");
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            fixFinishedTime(startDate);
         } finally {
-            if (fos!=null){
-                try{
-                    fos.flush();
-                    fos.close();
-                } catch (IOException exception){
-                    throw new RuntimeException(exception);
-                }
-            }
+            closeOutputStream(fos);
+        }
+    }
+
+    private void closeOutputStream(FileOutputStream fos) throws IOException {
+        if (fos != null) {
+            fos.flush();
+            fos.close();
         }
     }
 
@@ -85,4 +151,6 @@ public class ReportMakerTest {
         String res = ValueResolver.convertStringForXml("<d>f&g\"'");
         assertEquals(res, "&lt;d&gt;f&amp;g&quot;&apos;");
     }
+
+
 }
