@@ -63,14 +63,14 @@ public class DataIterationPerformer implements IterationPerformer {
             createMergedCell(cellIterator, templateBuilder, cell, value, isCellConditionDirective);
         } else {
             MockCell mergedRegionHeader = cellIterator.getMergedRegionHeader(new MockCell(cell.getRowIndex(),
-                                                                            cell.getColumnIndex()));
+                    cell.getColumnIndex()));
             if (mergedRegionHeader == null) {
                 createCell(templateBuilder, cell, isCellConditionDirective, value, value);
             } else {
                 String mergedRegionHeaderValue = cellIterator.getValueAt(mergedRegionHeader.getRow(),
-                                                                          mergedRegionHeader.getCol());
+                        mergedRegionHeader.getCol());
                 createCell(templateBuilder, cell, isCellConditionDirective(mergedRegionHeaderValue),
-                           mergedRegionHeaderValue, "");
+                        mergedRegionHeaderValue, "");
             }
         }
 
@@ -88,12 +88,13 @@ public class DataIterationPerformer implements IterationPerformer {
                     cellIterator.getOffset(cell),
                     getCondition(value)
             );
-        } else {
-            templateBuilder.addCell(value,
-                    cell.getColumnIndex(),
-                    ((XSSFCell) cell).getCellStyle().getIndex(),
-                    cellIterator.getOffset(cell));
+            return;
         }
+        templateBuilder.addCell(value,
+                cell.getColumnIndex(),
+                ((XSSFCell) cell).getCellStyle().getIndex(),
+                cellIterator.getOffset(cell));
+
     }
 
     private void createCell(VelocityTemplateBuilder templateBuilder, Cell cell,
@@ -103,12 +104,12 @@ public class DataIterationPerformer implements IterationPerformer {
                     cell.getColumnIndex(),
                     ((XSSFCell) cell).getCellStyle().getIndex(),
                     getCondition(value));
-        } else {
-            templateBuilder.addCell(displayText,
-                    cell.getColumnIndex(),
-                    ((XSSFCell) cell).getCellStyle().getIndex()
-            );
+            return;
         }
+        templateBuilder.addCell(displayText,
+                cell.getColumnIndex(),
+                ((XSSFCell) cell).getCellStyle().getIndex()
+        );
     }
 
     public String getCondition(String value) {
@@ -117,7 +118,7 @@ public class DataIterationPerformer implements IterationPerformer {
     }
 
     public String getPureValueShowIf(String value) {
-        if (value.isEmpty()){
+        if (value.isEmpty()) {
             return value;
         }
         int startIndex = value.indexOf(Markers.END_CELL_CONDITION) + Markers.END_CELL_CONDITION.length();

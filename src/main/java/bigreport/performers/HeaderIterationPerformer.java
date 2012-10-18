@@ -29,13 +29,14 @@ public class HeaderIterationPerformer implements IterationPerformer {
     public void iterate(CellIterator cellIterator, VelocityTemplateBuilder templateBuilder) throws IOException {
         while (cellIterator.hasNext()) {
             Cell cell = cellIterator.next();
+            boolean isMerged=cellIterator.isMergedCell();
             if (cell != null) {
                 String value = ValueResolver.resolve(cell);
                 if (graph.containsKey(value)) {
                     graph.get(value).iterate(cellIterator, templateBuilder);
                 }
             }
-            if (cellIterator.isMergedCell()) {
+            if (isMerged) {
                 cellIterator.addMergedCell(cell);
             }
         }

@@ -12,6 +12,5 @@ public class EndIterationPerformer implements IterationPerformer {
     public void iterate(CellIterator cellIterator, VelocityTemplateBuilder velocityTemplateBuilder) {
         Cell currentCell = cellIterator.getCurrentCell();
         cellIterator.setFinishedAt(new MockCell(currentCell.getRowIndex(), currentCell.getColumnIndex()));
-        cellIterator.remove();
     }
 }
