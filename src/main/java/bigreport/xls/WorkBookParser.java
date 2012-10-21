@@ -2,6 +2,7 @@ package bigreport.xls;
 
 import bigreport.TemplateDescription;
 import bigreport.performers.HeaderIterationPerformer;
+import bigreport.performers.IterationContext;
 import bigreport.velocity.VelocityTemplateBuilder;
 import bigreport.xls.merge.MergeInfo;
 import org.apache.commons.io.FileUtils;
@@ -39,21 +40,21 @@ public class WorkBookParser {
 
     private TemplateDescription parseSheet(XSSFSheet sheet) throws IOException {
         FileOutputStream tempMergeOutputStream = null;
-        File tempMergeData=null;
+        File tempMergeData = null;
         try {
             tempMergeData = File.createTempFile("merge" + sheet.getSheetName(), null);
             tempMergeOutputStream = new FileOutputStream(tempMergeData);
             CellIterator cellIterator = new CellIterator(sheet, tempMergeOutputStream);
             templateBuilder.start();
-            new HeaderIterationPerformer().iterate(cellIterator, templateBuilder);
+            new HeaderIterationPerformer().iterate(new IterationContext(cellIterator, templateBuilder));
             MergeInfo mergeInfo = new MergeInfo(tempMergeData, cellIterator.getMergedCount());
             return new TemplateDescription(templateBuilder.getTemplate(), cellIterator, mergeInfo);
         } catch (IOException e) {
             if (tempMergeOutputStream != null) {
                 tempMergeOutputStream.close();
-                tempMergeOutputStream=null;
+                tempMergeOutputStream = null;
             }
-            if (tempMergeData!=null && tempMergeData.exists()){
+            if (tempMergeData != null && tempMergeData.exists()) {
                 FileUtils.forceDelete(tempMergeData);
             }
             throw e;

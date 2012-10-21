@@ -10,6 +10,8 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import static bigreport.util.ValueResolver.*;
+
 /**
  * Performs cell iteration on data cells (after "start" directive)
  */
@@ -27,21 +29,43 @@ public class DataIterationPerformer implements IterationPerformer {
 
     public void iterate(IterationContext iterationContext) throws IOException {
         iterationContext.getTemplateBuilder().start();
-        CellIterator cellIterator=iterationContext.getCellIterator();
+        CellIterator cellIterator = iterationContext.getCellIterator();
         Cell currentCell = iterationContext.getCurrentCell();
         cellIterator.setStartedAt(new MockCell(currentCell.getRowIndex(), currentCell.getColumnIndex()));
         cellIterator.skipRow();
-        VelocityTemplateConstuctor constuctor=new VelocityTemplateConstuctor(iterationContext);
-        while (cellIterator.hasNext()) {
-            Cell cell = cellIterator.next();
-            if (cell != null) {
-                String value = ValueResolver.resolve(cell);
-                if (graph.containsKey(value)) {
-                    graph.get(value).iterate(iterationContext);
-                }  else {
-                    constuctor.appendCell(cell);
-                }
-            }
+        VelocityTemplateConstuctor constuctor = new VelocityTemplateConstuctor(iterationContext);
+        while (iterationContext.hasNext()) {
+            performCellInContext(iterationContext, constuctor);
         }
+    }
+
+    public void performCellInContext(IterationContext context, VelocityTemplateConstuctor constuctor) throws IOException {
+        Cell cell = context.next();
+        if (cell == null) {
+            return;
+        }
+        String value = resolve(cell);
+        if (shouldSwitchToAnotherPerformer(value)) {
+            startAnotherPerformer(context, value);
+            return;
+        }
+        if (isDirective(value)) {
+            performDirective(context, value);
+            return;
+        }
+        constuctor.appendCell(cell);
+    }
+
+    public void startAnotherPerformer(IterationContext context, Object value) throws IOException {
+        graph.get(value).iterate(context);
+    }
+
+    public boolean shouldSwitchToAnotherPerformer(Object value) {
+        return graph.containsKey(value);
+    }
+
+    private void performDirective(IterationContext context, String value) {
+        context.getTemplateBuilder().addDirective(convertToDirective(value));
+        context.getCellIterator().skipRow();
     }
 }

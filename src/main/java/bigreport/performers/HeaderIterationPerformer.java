@@ -30,13 +30,23 @@ public class HeaderIterationPerformer implements IterationPerformer {
             boolean isMerged=iterationContext.getCellIterator().isMergedCell();
             if (cell != null) {
                 String value = ValueResolver.resolve(cell);
-                if (graph.containsKey(value)) {
-                    graph.get(value).iterate(iterationContext);
+                if (shouldSwitchToAnotherPerformer(value)) {
+                    startAnotherPerformer(iterationContext, value);
                 }
             }
             if (isMerged) {
                 iterationContext.getCellIterator().addMergedCell(cell);
             }
         }
+    }
+
+    @Override
+    public boolean shouldSwitchToAnotherPerformer(Object value) {
+        return graph.containsKey(value);
+    }
+
+    @Override
+    public void startAnotherPerformer(IterationContext context, Object value) throws IOException {
+        graph.get(value).iterate(context);
     }
 }
