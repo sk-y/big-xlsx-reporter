@@ -81,6 +81,10 @@ public class CellIterator implements Iterator<Cell> {
         this.finishedAt = finishedAt;
     }
 
+    public void setFinishedAt(int row, int col){
+        setFinishedAt(new MockCell(row, col));
+    }
+
     public MockCell getStartedAt() {
         return startedAt;
     }

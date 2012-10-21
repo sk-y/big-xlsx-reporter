@@ -1,9 +1,7 @@
 package bigreport.performers;
 
-import bigreport.xls.CellIterator;
 import bigreport.Markers;
 import bigreport.util.ValueResolver;
-import bigreport.velocity.VelocityTemplateBuilder;
 import org.apache.poi.ss.usermodel.Cell;
 
 import java.io.IOException;
@@ -26,18 +24,18 @@ public class HeaderIterationPerformer implements IterationPerformer {
     }
 
     @Override
-    public void iterate(CellIterator cellIterator, VelocityTemplateBuilder templateBuilder) throws IOException {
-        while (cellIterator.hasNext()) {
-            Cell cell = cellIterator.next();
-            boolean isMerged=cellIterator.isMergedCell();
+    public void iterate(IterationContext iterationContext) throws IOException {
+        while (iterationContext.hasNext()) {
+            Cell cell = iterationContext.next();
+            boolean isMerged=iterationContext.getCellIterator().isMergedCell();
             if (cell != null) {
                 String value = ValueResolver.resolve(cell);
                 if (graph.containsKey(value)) {
-                    graph.get(value).iterate(cellIterator, templateBuilder);
+                    graph.get(value).iterate(iterationContext);
                 }
             }
             if (isMerged) {
-                cellIterator.addMergedCell(cell);
+                iterationContext.getCellIterator().addMergedCell(cell);
             }
         }
     }
