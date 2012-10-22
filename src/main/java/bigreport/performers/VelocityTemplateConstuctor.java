@@ -11,10 +11,6 @@ public class VelocityTemplateConstuctor {
 
     private final IterationContext iterationContext;
 
-    public VelocityTemplateConstuctor(CellIterator cellIterator, VelocityTemplateBuilder templateBuilder) {
-        iterationContext = new IterationContext(cellIterator, templateBuilder);
-    }
-
     public VelocityTemplateConstuctor(IterationContext iterationContext) {
         this.iterationContext = iterationContext;
     }

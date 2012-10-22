@@ -1,10 +1,10 @@
 package bigreport.xls;
 
 import bigreport.TemplateDescription;
+import bigreport.exception.CompositeIOException;
 import bigreport.performers.HeaderIterationPerformer;
 import bigreport.performers.IterationContext;
-import bigreport.velocity.VelocityTemplateBuilder;
-import bigreport.xls.merge.MergeInfo;
+import bigreport.util.StreamUtil;
 import org.apache.commons.io.FileUtils;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
@@ -15,9 +15,11 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import static bigreport.util.StreamUtil.close;
+import static bigreport.util.StreamUtil.closeStreamAndDeleteFile;
+
 public class WorkBookParser {
     private Workbook workbook;
-    private VelocityTemplateBuilder templateBuilder = new VelocityTemplateBuilder();
 
     public WorkBookParser(Workbook workbook) {
         this.workbook = workbook;
@@ -41,27 +43,20 @@ public class WorkBookParser {
     private TemplateDescription parseSheet(XSSFSheet sheet) throws IOException {
         FileOutputStream tempMergeOutputStream = null;
         File tempMergeData = null;
+        CompositeIOException compositeIOException = null;
         try {
             tempMergeData = File.createTempFile("merge" + sheet.getSheetName(), null);
             tempMergeOutputStream = new FileOutputStream(tempMergeData);
-            CellIterator cellIterator = new CellIterator(sheet, tempMergeOutputStream);
-            templateBuilder.start();
-            new HeaderIterationPerformer().iterate(new IterationContext(cellIterator, templateBuilder));
-            MergeInfo mergeInfo = new MergeInfo(tempMergeData, cellIterator.getMergedCount());
-            return new TemplateDescription(templateBuilder.getTemplate(), cellIterator, mergeInfo);
+            IterationContext context = IterationContext.createInstance(sheet, tempMergeOutputStream);
+            new HeaderIterationPerformer().iterate(context);
+            return new TemplateDescription(context, tempMergeData);
         } catch (IOException e) {
-            if (tempMergeOutputStream != null) {
-                tempMergeOutputStream.close();
-                tempMergeOutputStream = null;
-            }
-            if (tempMergeData != null && tempMergeData.exists()) {
-                FileUtils.forceDelete(tempMergeData);
-            }
-            throw e;
+            compositeIOException = new CompositeIOException(e);
+            closeStreamAndDeleteFile(tempMergeOutputStream, tempMergeData, compositeIOException);
+            tempMergeOutputStream=null;
+            throw compositeIOException;
         } finally {
-            if (tempMergeOutputStream != null) {
-                tempMergeOutputStream.close();
-            }
+            close(tempMergeOutputStream, compositeIOException);
         }
     }
 }

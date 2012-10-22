@@ -2,6 +2,7 @@ package bigreport.velocity;
 
 import bigreport.TemplateDescription;
 import bigreport.exception.CompositeIOException;
+import bigreport.util.StreamUtil;
 import bigreport.velocity.beans.ResolverBean;
 import bigreport.xls.merge.MergeInfo;
 import org.apache.velocity.Template;
@@ -15,6 +16,8 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
+import static bigreport.util.StreamUtil.close;
 
 public class VelocityResolver {
     private Map beans;
@@ -96,22 +99,6 @@ public class VelocityResolver {
             directives.add(directiveClass);
         }
     }
-
-    private void close(Closeable outputStream, CompositeIOException compositeException) throws IOException {
-        if (outputStream == null) {
-            return;
-        }
-        try {
-            outputStream.close();
-        } catch (IOException e) {
-            if (compositeException != null) {
-                compositeException.addSuppressedException(e);
-                return;
-            }
-            throw e;
-        }
-    }
-
 
     private void setupVelocityProperties(VelocityEngine ve) {
         ve.addProperty("resource.loader", "string");

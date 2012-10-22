@@ -10,7 +10,7 @@ import java.io.IOException;
 public class EndIterationPerformer implements IterationPerformer {
     public void iterate(IterationContext iterationContext) {
         Cell currentCell = iterationContext.getCurrentCell();
-        iterationContext.getCellIterator().setFinishedAt(currentCell.getRowIndex(), currentCell.getColumnIndex());
+        iterationContext.setFinishedAt(currentCell.getRowIndex(), currentCell.getColumnIndex());
     }
 
     @Override

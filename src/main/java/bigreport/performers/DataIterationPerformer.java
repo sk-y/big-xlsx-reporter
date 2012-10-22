@@ -28,10 +28,10 @@ public class DataIterationPerformer implements IterationPerformer {
     }
 
     public void iterate(IterationContext iterationContext) throws IOException {
-        iterationContext.getTemplateBuilder().start();
+        iterationContext.getTemplateBuilder().reset();
         CellIterator cellIterator = iterationContext.getCellIterator();
         Cell currentCell = iterationContext.getCurrentCell();
-        cellIterator.setStartedAt(new MockCell(currentCell.getRowIndex(), currentCell.getColumnIndex()));
+        iterationContext.setStartedAt(new MockCell(currentCell.getRowIndex(), currentCell.getColumnIndex()));
         cellIterator.skipRow();
         VelocityTemplateConstuctor constuctor = new VelocityTemplateConstuctor(iterationContext);
         while (iterationContext.hasNext()) {

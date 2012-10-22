@@ -21,6 +21,9 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
+import static bigreport.util.StreamUtil.closeZipFile;
+import static bigreport.util.StreamUtil.finishZipOutputStream;
+
 public class ReportMaker {
 
     private VelocityResolver resolver;
@@ -120,30 +123,10 @@ public class ReportMaker {
             }
             writeWorkBook(zipDestFileOutputStream, zippedTemplateCopy, sheetTemplates);
         } finally {
-            closeZipTemplateCopy(zippedTemplateCopy);
+            closeZipFile(zippedTemplateCopy);
             finishZipOutputStream(zipDestFileOutputStream);
         }
 
-    }
-
-    private void finishZipOutputStream(ZipOutputStream zipDestFileOutputStream) {
-        try {
-            if (zipDestFileOutputStream != null) {
-                zipDestFileOutputStream.finish();
-            }
-        } catch (Exception e) {
-            //ignore
-        }
-    }
-
-    private void closeZipTemplateCopy(ZipFile zippedTemplateCopy) {
-        try {
-            if (zippedTemplateCopy != null) {
-                zippedTemplateCopy.close();
-            }
-        } catch (Exception e) {
-            //ingnore
-        }
     }
 
     private void writeWorkBook(ZipOutputStream zipDestFileOutputStream, ZipFile zippedTemplateCopy,

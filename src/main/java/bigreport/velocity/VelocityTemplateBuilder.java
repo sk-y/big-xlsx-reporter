@@ -6,7 +6,7 @@ import bigreport.xls.merge.MergeOffset;
 public class VelocityTemplateBuilder {
     private StringBuilder templateBuilder;
 
-    public VelocityTemplateBuilder start() {
+    public VelocityTemplateBuilder reset() {
         templateBuilder = new StringBuilder();
         return this;
     }
