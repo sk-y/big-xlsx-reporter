@@ -7,6 +7,7 @@ import org.apache.poi.ss.usermodel.DateUtil;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Calendar;
+import java.util.Date;
 
 public class ResolverBean {
     private int rowOffset = 0;
@@ -90,7 +91,7 @@ public class ResolverBean {
             StreamUtil.writeMergedCell(mergedCellsOutputStream, getCurrentRow(), yOffset, col - skippedColumns, xOffset);
         }
     }
-/*
+
     public String addCell(double value, int columnIndex) {
         return addCell(value, columnIndex, -1);
     }
@@ -107,7 +108,7 @@ public class ResolverBean {
     public String addCell(int value, int columnIndex, int styleIndex, int xOffset, int yOffset) throws IOException {
         addMergedCells(columnIndex, xOffset, yOffset);
         return addCell(value, columnIndex, styleIndex);
-    }*/
+    }
 
 
     public String addCell(Calendar value, int columnIndex, int styleIndex) {
@@ -119,12 +120,29 @@ public class ResolverBean {
         return addCell(value, columnIndex, styleIndex);
     }
 
+    public String addCell(Date value, int columnIndex, int styleIndex) {
+        return addCell(DateUtil.getExcelDate(value, false), columnIndex, styleIndex);
+    }
+
+    public String addCell(Date value, int columnIndex, int styleIndex, int xOffset, int yOffset) throws IOException {
+        addMergedCells(columnIndex, xOffset, yOffset);
+        return addCell(value, columnIndex, styleIndex);
+    }
+
     public int getMergedRegionCount() {
         return mergedRegionCount;
     }
 
     public void setMergedCellsOutputStream(OutputStream mergedCellsOutputStream) {
         this.mergedCellsOutputStream = mergedCellsOutputStream;
+    }
+
+    public String nvl(){
+        return "";
+    }
+
+    public Object nvl(Object o){
+        return o;
     }
 }
 

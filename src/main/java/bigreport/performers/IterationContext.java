@@ -60,6 +60,6 @@ public class IterationContext implements Iterator<Cell> {
 
     @Override
     public void remove() {
-        return;
+        throw new UnsupportedOperationException("Cannot remove item from original file");
     }
 }

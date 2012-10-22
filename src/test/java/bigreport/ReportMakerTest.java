@@ -138,7 +138,7 @@ public class ReportMakerTest {
     private Map<String, Object> createDataBean(Random random) {
         List<CalcItem> itemList = new ArrayList<CalcItem>();
         while (itemList.size() < 1000) {
-            itemList.add(new CalcItem("<&Unit1" + itemList.size(), random.nextFloat() * 20, random.nextInt(20)));
+            itemList.add(new CalcItem("<\"&Unit1" + itemList.size(), random.nextFloat() * 20, random.nextInt(20), new Date()));
         }
         Map<String, Object> bean = new HashMap<String, Object>();
         bean.put("rows", itemList);

@@ -22,26 +22,31 @@ public class VelocityTemplateConstuctor {
     private void createCell() {
         String value = resolve(iterationContext.getCurrentCell());
         boolean isCellCondition = isCellConditionDirective(value);
-        if (createIfMergedCell(value, isCellCondition)) return;
-        if (createIfMergedChildCell()) return;
-        createCell( isCellCondition, value, value);
+        if (checkIsMergedCell()){
+            createMergedCell(value, isCellCondition);
+            return;
+        }
+        if (checkIsMergedChildCell()) {
+            createMergedChildCell();
+            return;
+        }
+        createCell(isCellCondition, value, value);
     }
 
-    private boolean createIfMergedCell(String value, boolean cellCondition) {
-        if (iterationContext.getCellIterator().isMergedCell()) {
-            createMergedCell(iterationContext.getCurrentCell(), value, cellCondition);
-            return true;
-        }
-        return false;
+    private void createMergedCell(String value, boolean cellCondition) {
+        createMergedCell(iterationContext.getCurrentCell(), value, cellCondition);
     }
 
-    private boolean createIfMergedChildCell() {
-        MockCell mergedRegionHeader = iterationContext.getOriginalMergedHeadRegion();
-        if (mergedRegionHeader != null) {
-            createMergedChildCell(mergedRegionHeader);
-            return true;
-        }
-        return false;
+    private void createMergedChildCell() {
+        createMergedChildCell(iterationContext.getOriginalMergedHeadRegion());
+    }
+
+    private boolean checkIsMergedCell(){
+       return iterationContext.getCellIterator().isMergedCell();
+    }
+
+    private boolean checkIsMergedChildCell() {
+        return iterationContext.getOriginalMergedHeadRegion() != null;
     }
 
     private void createMergedChildCell(MockCell mergedRegionHeader) {
@@ -72,7 +77,7 @@ public class VelocityTemplateConstuctor {
     }
 
     private void createCell(boolean isCondition, String value, String displayText) {
-        Cell cell=iterationContext.getCurrentCell();
+        Cell cell = iterationContext.getCurrentCell();
         if (isCondition) {
             iterationContext.getTemplateBuilder().addCell(getPureValueShowIf(displayText),
                     cell.getColumnIndex(),
