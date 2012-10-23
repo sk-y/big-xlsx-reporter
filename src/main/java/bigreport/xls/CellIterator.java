@@ -1,5 +1,6 @@
 package bigreport.xls;
 
+import bigreport.performers.IterationContext;
 import bigreport.util.StreamUtil;
 import bigreport.util.ValueResolver;
 import bigreport.xls.merge.MergeCells;
@@ -14,23 +15,17 @@ import java.io.OutputStream;
 import java.util.Iterator;
 
 public class CellIterator implements Iterator<Cell> {
-    private MockCell startedAt;
-    private MockCell finishedAt;
     private Iterator<Row> rowIterator;
     private Iterator<Cell> cellIterator;
     private Sheet sheet;
     private boolean isNewRow = true;
     private Cell currentCell = null;
     private Row currentRow = null;
-    private final MergeCells originalCells;
-    private OutputStream mergedCellsOutputStream;
     private int mergedCount;
     private int outlineLevel;
+    private IterationContext iterationContext;
 
-    public CellIterator(XSSFSheet sheet, OutputStream mergedCellsOutputStream) {
-        originalCells= new MergeCells();
-        originalCells.detect(sheet);
-        this.mergedCellsOutputStream = mergedCellsOutputStream;
+    public CellIterator(XSSFSheet sheet) {
         this.sheet = sheet;
         this.rowIterator = sheet.rowIterator();
         this.mergedCount=0;
@@ -64,9 +59,7 @@ public class CellIterator implements Iterator<Cell> {
     }
 
     public void remove() {
-        rowIterator.remove();
-        sheet.removeRow(currentRow);
-        cellIterator = null;
+        throw new UnsupportedOperationException("Cannot remove items from original file");
     }
 
     public boolean isNewRow() {
@@ -77,39 +70,27 @@ public class CellIterator implements Iterator<Cell> {
         return cellIterator != null && !cellIterator.hasNext();
     }
 
-    public void setFinishedAt(MockCell finishedAt) {
-        this.finishedAt = finishedAt;
-    }
-
-    public MockCell getStartedAt() {
-        return startedAt;
-    }
-
-    public void setStartedAt(MockCell startedAt) {
-        this.startedAt = startedAt;
-    }
-
     public Cell getCurrentCell() {
         return currentCell;
     }
 
     public boolean isFinished() {
-        return finishedAt != null;
+        return iterationContext.getFinishedAt() != null;
     }
 
     public boolean isMergedCell() {
-        return originalCells.containsKey(new MockCell(currentCell.getRowIndex(), currentCell.getColumnIndex()));
+        return  iterationContext.getOriginalMergedCells().containsKey(currentCell);
     }
 
     public MockCell getMergedRegionHeader(MockCell cell){
-        return originalCells.getMergedRegionHeader(cell);
+        return iterationContext.getOriginalMergedCells().getMergedRegionHeader(cell);
     }
 
     public void addMergedCell(Cell cell) throws IOException {
         mergedCount++;
-        MockCell mockCell = new MockCell(cell.getRowIndex(), cell.getColumnIndex());
-        MergeOffset offset = originalCells.get(mockCell);
-        StreamUtil.writeMergedCell(mergedCellsOutputStream, mockCell, offset);
+        MockCell mockCell = new MockCell(cell);
+        MergeOffset offset = iterationContext.getOriginalMergedCells().get(mockCell);
+        iterationContext.addMergedCell(mockCell, offset);
     }
 
     public String getValueAt(int row, int col){
@@ -117,8 +98,8 @@ public class CellIterator implements Iterator<Cell> {
     }
 
     public MergeOffset getOffset(Cell cell) {
-        MockCell cellReference = new MockCell(cell.getRowIndex(), cell.getColumnIndex());
-        return originalCells.get(cellReference);
+        MockCell cellReference = new MockCell(cell);
+        return iterationContext.getOriginalMergedCells().get(cellReference);
     }
 
     public int getMergedCount() {
@@ -135,5 +116,9 @@ public class CellIterator implements Iterator<Cell> {
 
     public int getOutlineLevel() {
         return outlineLevel;
+    }
+
+    public void setContext(IterationContext iterationContext) {
+        this.iterationContext=iterationContext;
     }
 }

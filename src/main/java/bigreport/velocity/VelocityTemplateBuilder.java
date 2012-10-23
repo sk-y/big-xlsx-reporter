@@ -6,7 +6,7 @@ import bigreport.xls.merge.MergeOffset;
 public class VelocityTemplateBuilder {
     private StringBuilder templateBuilder;
 
-    public VelocityTemplateBuilder start() {
+    public VelocityTemplateBuilder reset() {
         templateBuilder = new StringBuilder();
         return this;
     }
@@ -16,11 +16,11 @@ public class VelocityTemplateBuilder {
     }
 
     public VelocityTemplateBuilder addCell(String value, int column, short styleIndex) {
-        value = value.replaceAll("\"", "\\$\\{dblqt\\}");
-        value = "\"" + value + "\"";
+        value = performQuotes(value);
         templateBuilder.append("$resolver.addCell(")
+                .append("$resolver.nvl(")
                 .append(value)
-                .append(",")
+                .append("),")
                 .append(column)
                 .append(",")
                 .append(styleIndex)
@@ -28,12 +28,19 @@ public class VelocityTemplateBuilder {
         return this;
     }
 
+    private String performQuotes(String value) {
+        if (value.contains("\"")){
+            value = "\""+value.replaceAll("\"", "\\$\\{dblqt\\}")+"\"";
+        }
+        return value;
+    }
+
     public VelocityTemplateBuilder addCell(String value, int column, short styleIndex, MergeOffset mergeOffset) {
-        value = value.replaceAll("\"", "\\$\\{dblqt\\}");
-        value = "\"" + value + "\"";
+        value = performQuotes(value);
         templateBuilder.append("$resolver.addCell(")
+                .append("$resolver.nvl(")
                 .append(value)
-                .append(",")
+                .append("),")
                 .append(column)
                 .append(",")
                 .append(styleIndex)

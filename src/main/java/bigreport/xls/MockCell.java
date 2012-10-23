@@ -1,5 +1,7 @@
 package bigreport.xls;
 
+import org.apache.poi.ss.usermodel.Cell;
+
 public class MockCell {
     private int row;
     private int col;
@@ -7,6 +9,11 @@ public class MockCell {
     public MockCell(int row, int col) {
         this.row = row;
         this.col = col;
+    }
+
+    public MockCell(Cell cell){
+        this.row=cell.getRowIndex();
+        this.col=cell.getColumnIndex();
     }
 
     public int getRow() {

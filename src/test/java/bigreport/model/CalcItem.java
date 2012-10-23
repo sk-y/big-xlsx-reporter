@@ -1,14 +1,18 @@
 package bigreport.model;
 
+import java.util.Date;
+
 public class CalcItem {
     private double price;
     private int count;
     private String name;
+    private Date date;
 
-    public CalcItem(String name, double price, int count) {
+    public CalcItem(String name, double price, int count, Date date) {
         this.name=name;
         this.price = price;
         this.count = count;
+        this.date=date;
     }
 
     public double getSum(){
@@ -37,5 +41,13 @@ public class CalcItem {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public Date getDate() {
+        return date;
+    }
+
+    public void setDate(Date date) {
+        this.date = date;
     }
 }

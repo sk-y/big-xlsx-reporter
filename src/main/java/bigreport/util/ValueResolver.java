@@ -1,10 +1,12 @@
 package bigreport.util;
 
+import bigreport.Markers;
 import bigreport.xls.MockCell;
 import bigreport.xls.merge.MergeOffset;
 import org.apache.poi.hssf.util.CellReference;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.xssf.usermodel.XSSFRow;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -112,23 +114,43 @@ public class ValueResolver {
         return sb;
     }
 
-    public static boolean isNumeric(String value) {
-        try {
-            new BigDecimal(value);
-            return true;
-        } catch (Exception e) {
+    public static boolean isDirective(Object cellValue) {
+        if (!(cellValue instanceof String)) {
             return false;
         }
+        String value = (String) cellValue;
+        return value.startsWith(Markers.START_DIRECTIVE) && value.endsWith(Markers.END_DIRECTIVE);
     }
 
-    public static boolean isString(String value) {
-        return !isNumeric(value);
-    }
-
-    public static boolean isVariable(String value) {
-        if (value == null) {
+    public static boolean isCellConditionDirective(Object cellValue) {
+        if (!(cellValue instanceof String)) {
             return false;
         }
-        return value.startsWith("$");
+        String value = (String) cellValue;
+        return value.startsWith(Markers.START_CELL_CONDITION_DIRECTIVE)
+                && value.contains(Markers.END_CELL_CONDITION)
+                && value.endsWith(Markers.END_CELL_CONDITION_DIRECTIVE);
+    }
+
+    public static String convertToDirective(String value) {
+        return value.substring(0, value.lastIndexOf(Markers.END_DIRECTIVE)).substring(Markers.START_DIRECTIVE.length());
+    }
+
+    public static String getCondition(String value) {
+        String cellData = value.replace(Markers.START_CELL_CONDITION_DIRECTIVE, "").replace(Markers.END_CELL_CONDITION_DIRECTIVE, "");
+        return cellData.substring(0, cellData.indexOf(Markers.END_CELL_CONDITION));
+    }
+
+    public static String getPureValueShowIf(String value) {
+        if (value.isEmpty()) {
+            return value;
+        }
+        int startIndex = value.indexOf(Markers.END_CELL_CONDITION) + Markers.END_CELL_CONDITION.length();
+        int endIndex = value.indexOf(Markers.END_CELL_CONDITION_DIRECTIVE);
+        return value.substring(startIndex, endIndex);
+    }
+
+    public static long getRowStyleForCell(Cell cell){
+        return ((XSSFRow) cell.getRow()).getCTRow().getS();
     }
 }

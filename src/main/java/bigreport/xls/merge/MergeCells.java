@@ -13,7 +13,7 @@ import java.util.Map;
 
 public class MergeCells extends HashMap<MockCell, MergeOffset> {
 
-    public void detect(XSSFSheet sheet) {
+    private MergeCells findMergedCells(XSSFSheet sheet) {
         List<CTMergeCell> mergeCellList = getListOfMergeCell(sheet);
         for (CTMergeCell mergeCell : mergeCellList) {
             CellRangeAddress rangeAddress = CellRangeAddress.valueOf(mergeCell.getRef());
@@ -22,6 +22,7 @@ public class MergeCells extends HashMap<MockCell, MergeOffset> {
                     rangeAddress.getLastRow() - rangeAddress.getFirstRow());
             put(cell, mergeOffset);
         }
+        return this;
     }
 
     private List<CTMergeCell> getListOfMergeCell(XSSFSheet sheet) {
@@ -46,6 +47,9 @@ public class MergeCells extends HashMap<MockCell, MergeOffset> {
             }
         }
         return null;
+    }
 
+    public static MergeCells detect(XSSFSheet sheet){
+        return new MergeCells().findMergedCells(sheet);
     }
 }

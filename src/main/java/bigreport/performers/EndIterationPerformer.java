@@ -1,16 +1,25 @@
 package bigreport.performers;
 
-import bigreport.xls.CellIterator;
-import bigreport.xls.MockCell;
-import bigreport.velocity.VelocityTemplateBuilder;
 import org.apache.poi.ss.usermodel.Cell;
+
+import java.io.IOException;
 
 /**
  * Performs cell iteration after "end" directive
  */
 public class EndIterationPerformer implements IterationPerformer {
-    public void iterate(CellIterator cellIterator, VelocityTemplateBuilder velocityTemplateBuilder) {
-        Cell currentCell = cellIterator.getCurrentCell();
-        cellIterator.setFinishedAt(new MockCell(currentCell.getRowIndex(), currentCell.getColumnIndex()));
+    public void iterate(IterationContext iterationContext) {
+        Cell currentCell = iterationContext.getCurrentCell();
+        iterationContext.setFinishedAt(currentCell.getRowIndex(), currentCell.getColumnIndex());
+    }
+
+    @Override
+    public boolean shouldSwitchToAnotherPerformer(Object value) {
+        return false;
+    }
+
+    @Override
+    public void startAnotherPerformer(IterationContext context, Object value){
+        throw new UnsupportedOperationException("No iteration performer should be started after end tag");
     }
 }
