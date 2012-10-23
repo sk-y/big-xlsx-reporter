@@ -21,8 +21,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
-import static bigreport.util.StreamUtil.closeZipFile;
-import static bigreport.util.StreamUtil.finishZipOutputStream;
+import static bigreport.util.StreamUtil.*;
 
 public class ReportMaker {
 
@@ -34,10 +33,6 @@ public class ReportMaker {
 
     public ReportMaker(Map beans) {
         this(new VelocityResolver(beans));
-    }
-
-    public ReportMaker(Map beans, List<Class<? extends Directive>> directives) {
-        this(new VelocityResolver(beans, directives));
     }
 
     public ReportMaker(VelocityResolver resolver) {
@@ -66,22 +61,7 @@ public class ReportMaker {
             throw compositeIOException;
         }  finally {
             IOUtils.closeQuietly(templateCopyOutputStream);
-            deleteTemplateCopy(templateCopy, compositeIOException);
-        }
-    }
-
-    private void deleteTemplateCopy(File templateCopy, CompositeIOException compositeException) throws IOException {
-        if (templateCopy != null && templateCopy.exists()) {
-            try {
-                FileUtils.forceDelete(templateCopy);
-            } catch (IOException e){
-                FileDeleteException exception=new FileDeleteException(e, templateCopy);
-                if (compositeException==null){
-                    throw exception;
-                }
-                compositeException.addSuppressedException(exception);
-                throw compositeException;
-            }
+            forceDelete(templateCopy, compositeIOException);
         }
     }
 
@@ -101,14 +81,8 @@ public class ReportMaker {
             throw compositeIOException;
         } finally {
             IOUtils.closeQuietly(destOutputStream);
-            deleteTemplateCopy(templateCopy, compositeIOException);
+            forceDelete(templateCopy, compositeIOException);
         }
-    }
-
-
-    public ReportMaker addDirective(Class<? extends Directive> directiveClass) {
-        resolver.addDirective(directiveClass);
-        return this;
     }
 
     private void doCreateReport(OutputStream destOutputStream, File templateCopy) throws IOException {
@@ -180,7 +154,7 @@ public class ReportMaker {
     private void writeSheet(OutputStream output, VelocityResult velocityResult,
                             String xlsxTemplateString, TemplateDescription templateDescription) throws IOException {
         writeBeforeData(templateDescription.getCellFrom().getRow() + 1, xlsxTemplateString, output);
-        writeDataFromTempFile(velocityResult.getDataXmlFile(), output);
+        writeFromFileToOutputStream(velocityResult.getDataXmlFile(), output);
         writeBetweenDataAndMergedSection(velocityResult, xlsxTemplateString, output);
         writeMergedCellsSection(velocityResult, output);
         writeRestData(velocityResult, xlsxTemplateString, output);
@@ -255,18 +229,6 @@ public class ReportMaker {
                 beforeMergedCells = xlsxTemplateString.substring(endOfDataIndex, startMergedCellsGroup);
             }
             IOUtils.write(beforeMergedCells, output, DEFAULT_CHAR_SET);
-        }
-    }
-
-    private void writeDataFromTempFile(File dataXmlFile, OutputStream output) throws IOException {
-        InputStream is = null;
-        try {
-            is = new FileInputStream(dataXmlFile);
-            IOUtils.copy(is, output);
-        } finally {
-            if (is != null) {
-                is.close();
-            }
         }
     }
 

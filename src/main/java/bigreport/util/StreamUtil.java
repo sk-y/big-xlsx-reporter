@@ -1,15 +1,13 @@
 package bigreport.util;
 
 import bigreport.exception.CompositeIOException;
+import bigreport.exception.FileDeleteException;
 import bigreport.xls.MockCell;
 import bigreport.xls.merge.MergeOffset;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 
-import java.io.Closeable;
-import java.io.File;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
@@ -43,17 +41,17 @@ public class StreamUtil {
     }
 
     public static void forceDelete(File fileToDelete, CompositeIOException ce) throws IOException {
-        if (fileToDelete == null) {
-            return;
-        }
-        try {
-            FileUtils.forceDelete(fileToDelete);
-        } catch (IOException e) {
-            if (ce != null) {
-                ce.addSuppressedException(e);
+        if (fileToDelete != null && fileToDelete.exists()) {
+            try {
+                FileUtils.forceDelete(fileToDelete);
+            } catch (IOException e){
+                FileDeleteException exception=new FileDeleteException(e, fileToDelete);
+                if (ce==null){
+                    throw exception;
+                }
+                ce.addSuppressedException(exception);
                 throw ce;
             }
-            throw e;
         }
     }
 
@@ -85,6 +83,18 @@ public class StreamUtil {
             }
         } catch (Exception e) {
             //ingnore
+        }
+    }
+
+    public static void writeFromFileToOutputStream(File file, OutputStream output) throws IOException {
+        InputStream is = null;
+        try {
+            is = new FileInputStream(file);
+            IOUtils.copy(is, output);
+        } finally {
+            if (is != null) {
+                is.close();
+            }
         }
     }
 

@@ -1,32 +1,36 @@
 package bigreport;
 
 import bigreport.model.CalcItem;
+import bigreport.util.StreamUtil;
 import bigreport.util.ValueResolver;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.velocity.texen.util.FileUtil;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
 
+import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Unit test for simple ReportMaker.
  */
 public class ReportMakerTest {
-    private final static String OUTPUT_DIRECTORY_NAME ="out";
+    private final static String OUTPUT_DIRECTORY_NAME = "out";
     private Random random;
     private static File outputDir;
+    private final static String[] HEADER_ARRAY = {"Name", "Price", "Count", "Sum", "", "Date"};
 
     @Before
     public void init() throws IOException {
         random = new Random(System.currentTimeMillis());
-        outputDir=createOutDir();
+        outputDir = createOutDir();
     }
 
     @Test
@@ -53,11 +57,19 @@ public class ReportMakerTest {
     }
 
     private void testReportCreation(String fileName) throws IOException {
-        String templatePath = Thread.currentThread().getContextClassLoader().getResource(fileName).getFile();
-        Map<String, Object> bean = createDataBean(random);
-        Date startDate = fixStartTime();
-        new ReportMaker(bean).createReport(templatePath, createReportFilePathAndName(outputDir));
-        fixFinishedTime(startDate);
+        File reportFile=null;
+        try {
+            String templatePath = Thread.currentThread().getContextClassLoader().getResource(fileName).getFile();
+            Map<String, Object> bean = createDataBean(random);
+            Date startDate = fixStartTime();
+            String reportFileName = createReportFilePathAndName(outputDir);
+            reportFile = new File(reportFileName);
+            new ReportMaker(bean).createReport(templatePath, reportFileName);
+            fixFinishedTime(startDate);
+            checkData(reportFile, bean);
+        } finally {
+            StreamUtil.forceDelete(reportFile, null);
+        }
     }
 
     private Date fixStartTime() {
@@ -78,14 +90,14 @@ public class ReportMakerTest {
 
     private File createOutDir() throws IOException {
         File outDir = new File(OUTPUT_DIRECTORY_NAME);
-        if (outDir.exists()){
-            System.out.println("Output directory exists:"+outDir.getAbsolutePath());
+        if (outDir.exists()) {
+            System.out.println("Output directory exists:" + outDir.getAbsolutePath());
             return outDir;
         }
-        if (!outDir.mkdir()){
+        if (!outDir.mkdir()) {
             throw new IOException("Error while creating output directory");
         }
-        System.out.println("Output directory created:"+outDir.getAbsolutePath());
+        System.out.println("Output directory created:" + outDir.getAbsolutePath());
         return outDir;
     }
 
@@ -115,16 +127,19 @@ public class ReportMakerTest {
     private void testReportCreationWithStreams(String resourceName) throws IOException {
         String templatePath = Thread.currentThread().getContextClassLoader().getResource(resourceName).getFile();
         FileOutputStream fos = null;
+        File reportFile = null;
         try {
             Map<String, Object> bean = createDataBean(random);
             Date startDate = fixStartTime();
             FileInputStream fis = new FileInputStream(templatePath);
-            File reportFile = new File(createReportFilePathAndName(outputDir));
+            reportFile = new File(createReportFilePathAndName(outputDir));
             fos = new FileOutputStream(reportFile);
             new ReportMaker(bean).createReport(fis, fos);
             fixFinishedTime(startDate);
+            checkData(reportFile, bean);
         } finally {
             closeOutputStream(fos);
+            StreamUtil.forceDelete(reportFile, null);
         }
     }
 
@@ -150,6 +165,66 @@ public class ReportMakerTest {
     public void convertString() {
         String res = ValueResolver.convertStringForXml("<d>f&g\"'");
         assertEquals(res, "&lt;d&gt;f&amp;g&quot;&apos;");
+    }
+
+    private void checkData(File resultFile, Map<String, Object> dataBean) throws IOException {
+        FileInputStream resultStream = null;
+        try {
+            resultStream = new FileInputStream(resultFile);
+            Workbook workbook = new XSSFWorkbook(resultStream);
+            Sheet sheet = workbook.getSheet("Sheet1");
+            Row row = sheet.getRow(0);
+            assertHeaders(row, HEADER_ARRAY);
+            assertData(sheet, dataBean);
+        } finally {
+            StreamUtil.close(resultStream, null);
+        }
+    }
+
+    private void assertData(Sheet sheet, Map<String, Object> dataBean) {
+        List itemList = (List) dataBean.get("rows");
+        for (int i = 0; i < itemList.size(); i++) {
+            CalcItem item = (CalcItem) itemList.get(i);
+            assertRow(item, sheet.getRow(i + 1));
+        }
+    }
+
+    private void assertRow(CalcItem item, Row row) {
+        if (item.getPrice() < 10) {
+            assertPriceLessThenTen(item, row);
+        } else {
+            assertPriceGreaterEqualsThenTen(item, row);
+        }
+    }
+
+    private void assertPriceGreaterEqualsThenTen(CalcItem item, Row row) {
+        assertGeneralCells(item, row);
+        assertEquals("\"" + item.getName(), row.getCell(0).getStringCellValue());
+        if (item.getPrice() < 15) {
+            assertEquals(item.getSum(), row.getCell(3).getNumericCellValue(), 0);
+        } else {
+            assertEquals(item.getSum(), row.getCell(4).getNumericCellValue(), 0);
+        }
+    }
+
+
+    private void assertPriceLessThenTen(CalcItem item, Row row) {
+        assertEquals(item.getName(), row.getCell(0).getStringCellValue());
+        assertGeneralCells(item, row);
+        assertEquals(item.getSum(), row.getCell(3).getNumericCellValue(), 0);
+        assertEquals(Cell.CELL_TYPE_BLANK, row.getCell(4).getCellType());
+    }
+
+    private void assertGeneralCells(CalcItem item, Row row) {
+        assertEquals(item.getPrice(), row.getCell(1).getNumericCellValue(), 0);
+        assertEquals(item.getCount(), row.getCell(2).getNumericCellValue(), 0);
+        assertEquals(item.getDate(), row.getCell(5).getDateCellValue());
+    }
+
+    private void assertHeaders(Row row, String[] headerArray) {
+        for (int i = 0; i < headerArray.length; i++) {
+            assertEquals(row.getCell(i).getStringCellValue(), headerArray[i]);
+        }
     }
 
 
