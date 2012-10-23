@@ -68,7 +68,7 @@ public class ReportMakerTest {
             fixFinishedTime(startDate);
             checkData(reportFile, bean);
         } finally {
-            StreamUtil.forceDelete(reportFile, null);
+         //   StreamUtil.forceDelete(reportFile, null);
         }
     }
 
@@ -155,6 +155,7 @@ public class ReportMakerTest {
         while (itemList.size() < 1000) {
             itemList.add(new CalcItem("<\"&Unit1" + itemList.size(), random.nextFloat() * 20, random.nextInt(20), new Date()));
         }
+        itemList.add(new CalcItem(null, 0, 0, null));
         Map<String, Object> bean = new HashMap<String, Object>();
         bean.put("rows", itemList);
         return bean;
@@ -209,7 +210,7 @@ public class ReportMakerTest {
 
 
     private void assertPriceLessThenTen(CalcItem item, Row row) {
-        assertEquals(item.getName(), row.getCell(0).getStringCellValue());
+        assertEquals(nvl(item.getName()), row.getCell(0).getStringCellValue());
         assertGeneralCells(item, row);
         assertEquals(item.getSum(), row.getCell(3).getNumericCellValue(), 0);
         assertEquals(Cell.CELL_TYPE_BLANK, row.getCell(4).getCellType());
@@ -227,5 +228,10 @@ public class ReportMakerTest {
         }
     }
 
-
+    private Object nvl(Object o){
+        if (o==null){
+            return "";
+        }
+        return o;
+    }
 }

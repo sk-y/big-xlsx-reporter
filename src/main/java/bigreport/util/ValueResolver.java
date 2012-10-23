@@ -114,15 +114,6 @@ public class ValueResolver {
         return sb;
     }
 
-    public static boolean isNumeric(String value) {
-        try {
-            new BigDecimal(value);
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
     public static boolean isDirective(Object cellValue) {
         if (!(cellValue instanceof String)) {
             return false;
@@ -159,18 +150,7 @@ public class ValueResolver {
         return value.substring(startIndex, endIndex);
     }
 
-    public static boolean isString(String value) {
-        return !isNumeric(value);
-    }
-
     public static long getRowStyleForCell(Cell cell){
         return ((XSSFRow) cell.getRow()).getCTRow().getS();
-    }
-
-    public static boolean isVariable(String value) {
-        if (value == null) {
-            return false;
-        }
-        return value.startsWith("$");
     }
 }

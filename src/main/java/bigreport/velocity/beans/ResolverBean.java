@@ -58,9 +58,6 @@ public class ResolverBean {
     }
 
     public String addCell(String value, int columnIndex, int styleIndex) {
-        if (ValueResolver.isNumeric(value)) {
-            return ValueResolver.getNumberCellAsString(value, getCurrentRow(), columnIndex - skippedColumns, styleIndex);
-        }
         return ValueResolver.getCellAsString(value, getCurrentRow(), columnIndex - skippedColumns, styleIndex);
     }
 
@@ -69,9 +66,6 @@ public class ResolverBean {
     }
 
     public String addCell(String value, int columnIndex, int xOffset, int yOffset) throws IOException {
-        if (ValueResolver.isNumeric(value)) {
-
-        }
         addMergedCells(columnIndex, xOffset, yOffset);
         return addCell(value, columnIndex, -1, xOffset, yOffset);
     }
@@ -142,6 +136,9 @@ public class ResolverBean {
     }
 
     public Object nvl(Object o){
+        if (o==null){
+            return nvl();
+        }
         return o;
     }
 }
