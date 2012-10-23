@@ -1,6 +1,8 @@
 package bigreport.velocity;
 
 import bigreport.TemplateDescription;
+import bigreport.exception.CompositeIOException;
+import bigreport.util.StreamUtil;
 import bigreport.velocity.beans.ResolverBean;
 import bigreport.xls.merge.MergeInfo;
 import org.apache.velocity.Template;
@@ -15,10 +17,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static bigreport.util.StreamUtil.close;
+
 public class VelocityResolver {
     private Map beans;
 
     private List<Class<? extends Directive>> directives;
+    private final static String TEMPLATE_NAME = "testTemplate";
+    private final static String DEFAULT_ENCODING = "UTF-8";
+    private final static String RESLOVER_NEME = "resolver";
+    private final static String QUOTE_OBJECT_NAME = "dblqt";
 
     public VelocityResolver(Map beans) {
         this(beans, (List<Class<? extends Directive>>) null);
@@ -32,32 +40,41 @@ public class VelocityResolver {
     public void resolve(TemplateDescription templateDescription, Writer writer, File mergedCellsTempFile) throws IOException {
         VelocityEngine ve = new VelocityEngine();
         setupVelocityProperties(ve);
-        StringResourceRepository repo = StringResourceLoader.getRepository();
-        String templateName = "testTemplate";
-        repo.putStringResource(templateName, templateDescription.getTemplate());
-        Template template = ve.getTemplate(templateName,"UTF-8");
+        Template template = createTemplate(templateDescription, ve);
         VelocityContext context = new VelocityContext(beans);
-        FileOutputStream fileOutputStream = null;
         ResolverBean resolverBean = new ResolverBean(templateDescription.getCellFrom().getRow() - 1);
+        CompositeIOException compositeIOException = null;
+        FileOutputStream fileOutputStream = null;
         try {
             fileOutputStream = new FileOutputStream(mergedCellsTempFile, true);
             resolverBean.setMergedCellsOutputStream(fileOutputStream);
-            context.put("resolver", resolverBean);
-            context.put("dblqt","\"");
+            initContext(context, resolverBean);
             template.merge(context, writer);
             writer.flush();
             fileOutputStream.flush();
         } catch (IOException e) {
-            throw e;
+            compositeIOException = new CompositeIOException(e);
+            throw compositeIOException;
         } finally {
             try {
-                closeStream(fileOutputStream);
+                close(fileOutputStream, compositeIOException);
             } finally {
-                closeWriter(writer);
+                close(writer, compositeIOException);
             }
         }
         MergeInfo mergeInfo = templateDescription.getMergeInfo();
         mergeInfo.setCount(mergeInfo.getCount() + resolverBean.getMergedRegionCount());
+    }
+
+    private void initContext(VelocityContext context, ResolverBean resolverBean) {
+        context.put(RESLOVER_NEME, resolverBean);
+        context.put(QUOTE_OBJECT_NAME, "\"");
+    }
+
+    private Template createTemplate(TemplateDescription templateDescription, VelocityEngine ve) {
+        StringResourceRepository repo = StringResourceLoader.getRepository();
+        repo.putStringResource(TEMPLATE_NAME, templateDescription.getTemplate());
+        return ve.getTemplate(TEMPLATE_NAME, DEFAULT_ENCODING);
     }
 
     public String getDirectivesString() {
@@ -80,18 +97,6 @@ public class VelocityResolver {
         }
         if (!directives.contains(directiveClass)) {
             directives.add(directiveClass);
-        }
-    }
-
-    private void closeStream(OutputStream outputStream) throws IOException {
-        if (outputStream != null) {
-            outputStream.close();
-        }
-    }
-
-    private void closeWriter(Writer writer) throws IOException {
-        if (writer != null) {
-            writer.close();
         }
     }
 
