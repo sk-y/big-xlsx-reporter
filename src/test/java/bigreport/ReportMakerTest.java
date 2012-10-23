@@ -68,7 +68,7 @@ public class ReportMakerTest {
             fixFinishedTime(startDate);
             checkData(reportFile, bean);
         } finally {
-         //   StreamUtil.forceDelete(reportFile, null);
+           StreamUtil.forceDelete(reportFile, null);
         }
     }
 
